@@ -208,6 +208,31 @@ def merge_specific_videos(source_dir=None, output_name=None, max_per_batch=15, l
                             video_files.append(rel_path)
     
     all_videos = sorted(video_files)
+    
+    # 按文件下载时间（修改时间）排序
+    all_videos_with_time = []
+    for video in all_videos:
+        full_path = os.path.join(source_dir, video)
+        
+        # 获取文件的下载时间（修改时间）
+        mtime = os.path.getmtime(full_path)
+        all_videos_with_time.append((video, mtime))
+    
+    # 按时间排序（从早到晚）
+    all_videos_with_time.sort(key=lambda x: x[1])
+    print("使用文件下载时间排序")
+    
+    # 提取排序后的文件列表
+    all_videos = [video for video, _ in all_videos_with_time]
+    
+    # 如果指定了last_n参数，只取最新的N个视频
+    if last_n and isinstance(last_n, int) and last_n > 0:
+        if last_n < len(all_videos):
+            print(f"根据参数只取最新的{last_n}个视频（共有{len(all_videos)}个）")
+            all_videos = all_videos[-last_n:]  # 取最后N个（最新的）
+        else:
+            print(f"只有{len(all_videos)}个视频，将全部处理")
+    
     merge_count = len(all_videos)
     
     if merge_count == 0:
@@ -286,34 +311,92 @@ def merge_specific_videos(source_dir=None, output_name=None, max_per_batch=15, l
 
 def merge_video_batch(video_paths, output_path):
     """合并一批视频文件"""
-    inputs = []
-    filter_parts = []
-
-    for idx, path in enumerate(video_paths):
-        inputs += ["-i", path]
-        filter_parts.append(f"[{idx}:v:0][{idx}:a:0]")
-
-    filter_complex = "".join(filter_parts) + f"concat=n={len(video_paths)}:v=1:a=1[outv][outa]"
-
+    # 如果只有一个视频，直接复制它
+    if len(video_paths) == 1:
+        import shutil
+        shutil.copy2(video_paths[0], output_path)
+        print(f"只有一个视频，直接复制为输出: {output_path}")
+        return True
+    
+    # 如果视频太多，分批处理
+    if len(video_paths) > 2:  # 降低批次大小到2，确保成功率
+        print(f"视频太多({len(video_paths)}个)，分批处理")
+        mid = len(video_paths) // 2
+        first_half = video_paths[:mid]
+        second_half = video_paths[mid:]
+        
+        # 处理第一批
+        print(f"处理第一批({len(first_half)}个视频)...")
+        first_output = f"{output_path}.part1.mp4"
+        if not merge_video_batch(first_half, first_output):
+            return False
+        
+        # 处理第二批
+        print(f"处理第二批({len(second_half)}个视频)...")
+        second_output = f"{output_path}.part2.mp4"
+        if not merge_video_batch(second_half, second_output):
+            return False
+        
+        # 合并两批
+        print("合并两批...")
+        return merge_video_batch([first_output, second_output], output_path)
+    
+    # 到这里，只处理两个视频的合并
+    print(f"合并两个视频: {', '.join([os.path.basename(p) for p in video_paths])}")
+    
+    # 使用simpler的FFmpeg命令
     command = [
         FFMPEG_PATH, "-y",
-        *inputs,
-        "-filter_complex", filter_complex,
-        "-map", "[outv]", "-map", "[outa]",
+        "-i", video_paths[0],
+        "-i", video_paths[1],
+        "-filter_complex", "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[outv][outa]",
+        "-map", "[outv]", 
+        "-map", "[outa]",
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-c:a", "aac", "-b:a", "128k",
-        "-movflags", "+faststart",
         output_path
     ]
-
-    print(f"运行FFmpeg命令合并视频...")
+    
+    # 保存命令用于调试
+    cmd_log_path = f"{output_path}.cmd.txt"
+    with open(cmd_log_path, "w") as f:
+        f.write(" ".join(command))
+    
+    # 执行命令
+    print("执行FFmpeg命令...")
     result = subprocess.run(command, capture_output=True, text=True)
     
     if result.returncode == 0:
+        print(f"成功合并到: {output_path}")
         return True
     else:
-        print(f"合并失败: {result.stderr}")
-        return False
+        # 如果标准的方法失败，尝试另一种方法
+        print("标准合并失败，尝试备用方法...")
+        
+        # 创建一个concat文件
+        concat_file = f"{output_path}.concat.txt"
+        with open(concat_file, "w") as f:
+            for video_path in video_paths:
+                f.write(f"file '{os.path.abspath(video_path)}'\n")
+        
+        # 使用concat demuxer
+        command2 = [
+            FFMPEG_PATH, "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", concat_file,
+            "-c", "copy",
+            output_path
+        ]
+        
+        result2 = subprocess.run(command2, capture_output=True, text=True)
+        
+        if result2.returncode == 0:
+            print(f"备用方法成功: {output_path}")
+            return True
+        else:
+            print(f"所有合并方法都失败: {result2.stderr}")
+            return False
 
 def format_duration(seconds):
     """将秒数格式化为易读的时间格式"""
