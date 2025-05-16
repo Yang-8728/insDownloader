@@ -33,7 +33,8 @@ os.makedirs(PROFILE_PATH, exist_ok=True)
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 os.makedirs(MERGED_FOLDER, exist_ok=True)
 
-TITLE_PREFIX = "测试投稿#"
+# 修改标题前缀
+TITLE_PREFIX = "海外离大谱#"
 
 def load_serial_number():
     return int(open(SERIAL_NUMBER_FILE).read()) if os.path.exists(SERIAL_NUMBER_FILE) else 1
@@ -228,11 +229,27 @@ def fill_title(driver):
     )
     serial = load_serial_number()
     title = f"{TITLE_PREFIX}{serial}"
+    
+    # 记录上传的视频信息到日志文件
+    log_dir = "upload_logs"
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "upload_history.log")
+    
+    # 获取当前时间和上传的视频信息
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    video_info = f"{now} | {title} | {os.path.basename(find_latest_video(MERGED_FOLDER))}"
+    
+    # 写入日志
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(video_info + "\n")
+    
+    # 更新UI和保存序号
     input_box = driver.find_element(By.XPATH, '//input[@placeholder="请输入稿件标题"]')
     input_box.clear()
     input_box.send_keys(title)
     save_serial_number(serial + 1)
     print(f"✅ 已填写标题：{title}")
+    print(f"✅ 已记录上传信息到日志")
 
 
 def click_publish(driver):
@@ -278,6 +295,7 @@ def upload_latest_merged_video():
     start = time.time()
     driver = None
     success = False
+    duration = 0
     
     try:
         print("\n=== 开始上传视频到B站 ===")
@@ -329,8 +347,7 @@ def upload_latest_merged_video():
                 print(f"关闭浏览器时出错: {e}")
         
         duration = time.time() - start
-        print(f"总用时: {format_duration(duration)}")
-        return success
+        return success, duration  # 返回成功状态和用时
 
 
 if __name__ == "__main__":

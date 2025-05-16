@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+import time
 from test_login import ensure_logged_in_user, import_session, get_cookiefile
 from test_download import download_saved_videos
 from test_merge import merge_all_downloaded_videos
@@ -66,6 +67,8 @@ def main():
                 return 1
         elif choice == "5":  # 完整流程测试（包含上传）
             print("\n=== 开始完整流程测试 ===")
+            total_start_time = time.time()  # 记录总开始时间
+            video_duration = 0  # 合并视频的时长
             
             # 第一步：登录验证
             try:
@@ -80,31 +83,73 @@ def main():
             
             # 第二步：下载视频
             print("\n【步骤2】下载视频")
+            download_start = time.time()
             download_count = download_saved_videos(username)
+            download_time = time.time() - download_start
             if download_count <= 0:
                 print("没有新视频可下载，流程结束")
                 return 0
+            print(f"成功下载: {download_count} 个视频")
             
             # 第三步：合并视频
             print("\n【步骤3】合并视频")
+            merge_start = time.time()
             output_path, merge_count = merge_all_downloaded_videos()
+            merge_time = time.time() - merge_start
             if merge_count <= 0:
                 print("没有视频被合并，流程结束")
                 return 0
             print(f"成功合并: {merge_count} 个视频")
             print(f"输出文件: {output_path}")
             
+            # 获取视频时长（仅使用FFprobe）
+            video_duration = 0
+            try:
+                import subprocess
+                
+                # 检查是否有ffprobe
+                ffprobe_path = os.path.join("tools", "ffmpeg", "bin", "ffprobe.exe")
+                if os.path.exists(ffprobe_path):
+                    # 使用ffprobe获取视频时长
+                    cmd = [
+                        ffprobe_path,
+                        "-v", "error",
+                        "-show_entries", "format=duration",
+                        "-of", "default=noprint_wrappers=1:nokey=1",
+                        os.path.abspath(output_path)
+                    ]
+                    
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+                    video_duration = float(result.stdout.strip())
+                else:
+                    print("警告: FFprobe未找到，无法获取准确视频时长")
+            except Exception as e:
+                print(f"获取视频时长失败: {e}")
+            
             # 第四步：上传视频
             print("\n【步骤4】上传视频")
             try:
-                upload_latest_merged_video()
+                success, upload_time = upload_latest_merged_video()
             except Exception as e:
                 print(f"上传失败: {str(e)}")
                 return 1
             
-            print("\n=== 完整流程测试完成 ===")
-            return 0
+            # 计算总时间并打印总结信息
+            total_time = time.time() - total_start_time
             
+            # 格式化时间
+            def format_time(seconds):
+                minutes = int(seconds // 60)
+                secs = int(seconds % 60)
+                return f"{minutes}分{secs}秒" if minutes > 0 else f"{secs}秒"
+            
+            # 打印总结信息
+            video_duration_str = format_time(video_duration)
+            total_time_str = format_time(total_time)
+            
+            print(f"\n=== 新下载了{download_count}个视频，合并后视频时长{video_duration_str}，总用时{total_time_str} ===")
+            
+            return 0
         elif choice == "6":  # 更新为第6个选项
             print("再见!")
             return 0

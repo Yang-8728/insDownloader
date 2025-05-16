@@ -15,6 +15,8 @@ test_downloads/
 test_logs/
 downloads/
 logs/
+# 上传日志
+upload_logs/
 
 # 编辑器和IDE相关
 .idea/
