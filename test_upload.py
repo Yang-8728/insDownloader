@@ -56,6 +56,18 @@ def find_latest_video(folder):
 
 def init_browser():
     """初始化Chrome浏览器"""
+    options = Options()
+    # 添加新配置以抑制WebGL和GPU相关的控制台输出
+    options.add_argument("--log-level=3")  # 只显示致命错误
+    options.add_argument("--silent")
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    
+    # 添加额外的WebGL选项，避免警告
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-webgl")
+    options.add_argument("--disable-webgl2")
+    
     print(f"Chrome路径: {CHROME_PATH}")
     print(f"ChromeDriver路径: {CHROMEDRIVER_PATH}")
     
@@ -63,7 +75,6 @@ def init_browser():
     os.makedirs(PROFILE_PATH, exist_ok=True)
     os.makedirs(SCREENSHOT_DIR, exist_ok=True)
     
-    options = Options()
     options.binary_location = CHROME_PATH  # 明确指定Chrome可执行文件路径
     options.add_argument(f"--user-data-dir={os.path.abspath(PROFILE_PATH)}")
     options.add_argument("--profile-directory=Default")
@@ -81,6 +92,15 @@ def init_browser():
     
     try:
         driver = webdriver.Chrome(service=service, options=options)
+        
+        # 完全抑制Selenium日志输出
+        import logging
+        selenium_logger = logging.getLogger('selenium')
+        selenium_logger.setLevel(logging.CRITICAL)  # 只显示严重错误
+        
+        # 重定向Chrome的stderr到/dev/null
+        os.environ['CHROME_LOG_FILE'] = os.devnull
+        
         return driver, WebDriverWait(driver, 30)
     except Exception as e:
         print(f"浏览器初始化错误: {str(e)}")
@@ -260,24 +280,33 @@ def upload_latest_merged_video():
     success = False
     
     try:
-        # 确保目录存在
-        os.makedirs(SCREENSHOT_DIR, exist_ok=True)
-        
+        print("\n=== 开始上传视频到B站 ===")
         video = find_latest_video(MERGED_FOLDER)
-        print(f"找到视频: {video}")
+        print(f"找到视频: {os.path.basename(video)}")
         
         # 初始化浏览器
         driver, _ = init_browser()
         
-        # 打开投稿页面并处理登录
+        # 忽略浏览器输出，只显示我们的进度消息
+        print("1. 打开B站上传页面...")
         open_upload_page(driver)
         
-        # 上传视频
+        print("2. 选择并上传视频文件...")
         upload_video(driver, video)
+        
+        print("3. 等待上传完成...")
         wait_for_upload_complete(driver)
+        
+        print("4. 填写标题信息...")
         fill_title(driver)
+        
+        print("5. 提交视频...")
         click_publish(driver)
+        
+        print("6. 等待投稿结果...")
         wait_for_publish_success(driver)
+        
+        print("✓ 视频上传成功！")
         success = True
         
     except FileNotFoundError as e:
@@ -291,22 +320,13 @@ def upload_latest_merged_video():
             except:
                 pass
     finally:
+        # 移除交互提示，直接关闭浏览器
         if driver:
-            # 添加选项让用户决定何时关闭浏览器
             try:
-                close_browser = input("\n上传过程已完成。是否关闭浏览器？(y/n): ").lower().strip() == 'y'
-                if close_browser:
-                    driver.quit()
-                    print("浏览器已关闭")
-                else:
-                    print("浏览器保持打开状态，请在完成后手动关闭")
-                    # 不关闭浏览器，但返回结果
-            except:
-                # 如果出错，尝试关闭浏览器
-                try:
-                    driver.quit()
-                except:
-                    pass
+                driver.quit()
+                print("浏览器已关闭")
+            except Exception as e:
+                print(f"关闭浏览器时出错: {e}")
         
         duration = time.time() - start
         print(f"总用时: {format_duration(duration)}")

@@ -84,7 +84,6 @@ def main():
             if download_count <= 0:
                 print("没有新视频可下载，流程结束")
                 return 0
-            print(f"成功下载: {download_count} 个视频")
             
             # 第三步：合并视频
             print("\n【步骤3】合并视频")
@@ -99,7 +98,6 @@ def main():
             print("\n【步骤4】上传视频")
             try:
                 upload_latest_merged_video()
-                print("上传完成")
             except Exception as e:
                 print(f"上传失败: {str(e)}")
                 return 1
