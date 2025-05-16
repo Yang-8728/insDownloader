@@ -49,37 +49,38 @@ def main():
             else:
                 print("❌ 没有视频被合并或发生了错误。")
                 return 1
-        elif choice == "4":  # 新增：完整流程测试
-            print("\n🚀 开始完整流程测试...")
+        elif choice == "4":  # 完整流程测试
+            print("\n=== 开始完整流程测试 ===")
             
-            # 第一步：确保登录
+            # 第一步：登录验证
             try:
-                print("\n🔑 第一步：登录验证")
+                print("\n【步骤1】登录验证")
                 cookiefile = get_cookiefile()
+                print(f"使用 Firefox cookies: {cookiefile}")
                 import_session(cookiefile, username)
-                print("✅ 登录成功")
+                print("登录成功：会话文件已保存")
             except Exception as e:
-                print(f"❌ 登录失败: {str(e)}")
+                print(f"登录失败: {str(e)}")
                 return 1
             
             # 第二步：下载视频
-            print("\n📥 第二步：下载视频")
+            print("\n【步骤2】下载视频")
             download_count = download_saved_videos(username)
             if download_count <= 0:
-                print("⚠️ 没有新视频被下载，停止流程")
+                print("没有新视频可下载，流程结束")
                 return 0
-            print(f"✅ 成功下载了 {download_count} 个视频")
+            print(f"成功下载: {download_count} 个视频")
             
             # 第三步：合并视频
-            print("\n🔄 第三步：合并已下载视频")
+            print("\n【步骤3】合并视频")
             output_path, merge_count = merge_all_downloaded_videos()
             if merge_count > 0:
-                print(f"✅ 成功合并了 {merge_count} 个视频")
-                print(f"✅ 输出文件: {output_path}")
+                print(f"成功合并: {merge_count} 个视频")
+                print(f"输出文件: {output_path}")
             else:
-                print("⚠️ 没有视频被合并，可能之前已经合并过")
+                print("没有视频被合并，可能已经合并过")
             
-            print("\n🏁 完整流程测试完成！")
+            print("\n=== 完整流程测试完成 ===")
             return 0
             
         elif choice == "5":  # 更新为第5个选项

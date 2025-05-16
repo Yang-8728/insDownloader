@@ -98,7 +98,7 @@ def merge_all_downloaded_videos():
 
     # 标准化视频
     temp_video_paths = []
-    for video in tqdm(all_videos, desc="📦 Standardizing videos 标准化视频中"):
+    for video in tqdm(all_videos, desc="正在标准化视频"):
         original_path = os.path.join(DOWNLOADS_DIR, video)
         temp_path = os.path.join(TEMP_DIR, f"temp_{video}")
         success = standardize_video(original_path, temp_path)
@@ -132,21 +132,17 @@ def merge_all_downloaded_videos():
         final_output_path
     ]
 
-    print(f"🛠️ Merging and standardizing into {final_output_path}")
-    print(f"🛠️ 正在合并和标准化为 {final_output_path}")
+    print(f"正在合并视频: {final_output_path}")
     result = subprocess.run(command, capture_output=True, text=True)
 
     if result.returncode == 0:
-        print(f"✅ Final video saved to {final_output_path}")
-        print(f"✅ 最终视频已保存至 {final_output_path}")
+        print(f"视频已保存: {final_output_path}")
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             for video in all_videos:
                 f.write(video + "\n")
-        print(f"✅ Successfully merged {merge_count} videos.")
-        print(f"✅ 成功合并了 {merge_count} 个视频。")
+        print(f"成功合并: {merge_count} 个视频")
     else:
-        print(f"❌ Failed to merge videos: {result.stderr}")
-        print(f"❌ 合并视频失败: {result.stderr}")
+        print(f"合并失败: {result.stderr}")
         return None, 0
 
     return os.path.abspath(final_output_path), merge_count

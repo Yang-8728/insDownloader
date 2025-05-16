@@ -96,7 +96,7 @@ def download_saved_videos(username: str) -> int:
         skipped_count = len(all_posts) - len(video_posts)
         newly_downloaded = []
 
-        progress_bar = tqdm(video_posts, desc="📦 正在下载", unit="视频", position=0, leave=True)
+        progress_bar = tqdm(video_posts, desc="正在下载视频", unit="个")
 
         for post in progress_bar:
             with suppress_stdout_stderr():
@@ -113,10 +113,10 @@ def download_saved_videos(username: str) -> int:
 
         duration = format_duration(time.time() - start_time)
 
-        print(f"\n✅ 下载完成：{count_downloaded} 个")
+        print(f"\n下载完成: {count_downloaded} 个视频")
         if skipped_count > 0:
-            print(f"⏭️ 跳过了 {skipped_count} 个已下载视频")
-        print(f"🕒 总耗时：{duration}")
+            print(f"已跳过: {skipped_count} 个已下载的视频")
+        print(f"总耗时: {duration}")
 
         return count_downloaded
 

@@ -49,8 +49,7 @@ def validate_login(cookiefile, input_username):
 
 # 🔐 从 cookie 登录并保存 session 文件
 def import_session(cookiefile, username):
-    print(f"📄 Using cookies from: {cookiefile}")
-    print(f"📄 使用的 cookie 文件路径为：{cookiefile}")
+    print(f"使用的 cookie 文件路径为：{cookiefile}")
 
     conn = connect(f"file:{cookiefile}?immutable=1", uri=True)
     try:
@@ -66,13 +65,13 @@ def import_session(cookiefile, username):
     loader.context._session.cookies.update(cookie_data)
     loader.context.username = username
 
-    print(f"🔐 Verifying login for: {username}\n🔐 正在验证账号：{username}")
+    print(f"正在验证账号：{username}")
     if not loader.test_login():
         raise SystemExit("❌ Login failed. 请确认你已在 Firefox 中登录 Instagram。")
 
     session_path = get_session_file_path(username)
     loader.save_session_to_file(session_path)
-    print(f"✅ Session saved to: {session_path}\n✅ Session 文件已保存到：{session_path}")
+    print(f"Session 文件已保存到：{session_path}")
 
 # 🚀 确保用户已登录（首次输入并保存到 .env）
 def ensure_logged_in_user():
