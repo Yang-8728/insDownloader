@@ -4,6 +4,7 @@ import sys
 from test_login import ensure_logged_in_user, import_session, get_cookiefile
 from test_download import download_saved_videos
 from test_merge import merge_all_downloaded_videos
+from test_upload import upload_latest_merged_video  # 导入上传功能
 
 def main():
     """Instagram下载器应用的测试环境入口点"""
@@ -15,15 +16,16 @@ def main():
         # 检查是否有用户名
         username = ensure_logged_in_user()
         
-        # 询问用户操作 - 修改菜单，添加全流程测试选项
+        # 询问用户操作 - 添加上传功能和新的完整流程
         print("\n请选择操作:")
         print("1. 登录/更换账号")
         print("2. 下载收藏的视频")
         print("3. 合并已下载视频")
-        print("4. 完整流程测试：登录+下载+合并")
-        print("5. 退出")
+        print("4. 上传到B站")
+        print("5. 完整流程测试：登录+下载+合并+上传")
+        print("6. 退出")
         
-        choice = input("输入选项 (1-5): ").strip()
+        choice = input("输入选项 (1-6): ").strip()
         
         if choice == "1":
             try:
@@ -49,7 +51,20 @@ def main():
             else:
                 print("❌ 没有视频被合并或发生了错误。")
                 return 1
-        elif choice == "4":  # 完整流程测试
+        elif choice == "4":  # 上传功能
+            print("\n=== 开始上传到B站 ===")
+            try:
+                success = upload_latest_merged_video()
+                if success:
+                    print("上传成功完成")
+                    return 0
+                else:
+                    print("上传过程未完成，请查看错误信息")
+                    return 1
+            except Exception as e:
+                print(f"上传过程出现异常: {str(e)}")
+                return 1
+        elif choice == "5":  # 完整流程测试（包含上传）
             print("\n=== 开始完整流程测试 ===")
             
             # 第一步：登录验证
@@ -74,16 +89,25 @@ def main():
             # 第三步：合并视频
             print("\n【步骤3】合并视频")
             output_path, merge_count = merge_all_downloaded_videos()
-            if merge_count > 0:
-                print(f"成功合并: {merge_count} 个视频")
-                print(f"输出文件: {output_path}")
-            else:
-                print("没有视频被合并，可能已经合并过")
+            if merge_count <= 0:
+                print("没有视频被合并，流程结束")
+                return 0
+            print(f"成功合并: {merge_count} 个视频")
+            print(f"输出文件: {output_path}")
+            
+            # 第四步：上传视频
+            print("\n【步骤4】上传视频")
+            try:
+                upload_latest_merged_video()
+                print("上传完成")
+            except Exception as e:
+                print(f"上传失败: {str(e)}")
+                return 1
             
             print("\n=== 完整流程测试完成 ===")
             return 0
             
-        elif choice == "5":  # 更新为第5个选项
+        elif choice == "6":  # 更新为第6个选项
             print("再见!")
             return 0
         else:
