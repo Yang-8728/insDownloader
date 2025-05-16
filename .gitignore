@@ -32,3 +32,5 @@ Thumbs.db
 
 # 会话和凭证文件（敏感信息）
 **/session-*
+
+tools/
