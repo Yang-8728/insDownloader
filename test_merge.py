@@ -147,7 +147,19 @@ def merge_all_downloaded_videos():
 
     return os.path.abspath(final_output_path), merge_count
 
+def format_duration(seconds):
+    """将秒数格式化为易读的时间格式"""
+    minutes = int(seconds // 60)
+    secs = int(seconds % 60)
+    
+    if minutes > 0:
+        return f"{minutes}分{secs}秒"
+    else:
+        return f"{secs}秒"
+
 if __name__ == "__main__":
+    start_time = time.time()
     path, count = merge_all_downloaded_videos()
     print(f"✅ Merge completed, generated file: {path}, merged count: {count} videos")
     print(f"✅ 合并完成，生成文件：{path}，合并数量：{count} 个")
+    print(f"总用时: {format_duration(time.time() - start_time)}")
