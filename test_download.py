@@ -128,6 +128,29 @@ def download_saved_videos(username: str) -> int:
         return 0
 
 
+def download_new_videos():
+    """下载新视频的入口函数
+    Entry function for downloading new videos
+
+    Returns:
+        int: 下载的视频数量 / Number of downloaded videos
+    """
+    try:
+        username = ensure_logged_in_user()
+        if not username:
+            print("未找到登录用户，请先运行登录程序")
+            return 0
+        
+        print(f"开始为用户 {username} 下载新视频...")
+        return download_saved_videos(username)
+    except Exception as e:
+        print(f"下载过程中出错: {e}")
+        return 0
+
+
+# 兼容性别名 - 用于支持老的导入语句
+download_instagram_videos = download_new_videos
+
 if __name__ == "__main__":
     username = ensure_logged_in_user()
     download_saved_videos(username)
